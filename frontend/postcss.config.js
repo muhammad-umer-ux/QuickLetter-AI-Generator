@@ -1,6 +1,7 @@
+// postcss.config.js
 module.exports = {
   plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
+    tailwindcss: {}, // اس لائن کو یقینی بنائیں
+    autoprefixer: {}, // اس لائن کو بھی یقینی بنائیں
   },
-}
+};
