@@ -1,128 +1,80 @@
-# QuickLetter_Project/backend/main.py
-
+# main.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from google.generativeai.types import HarmCategory, HarmBlockThreshold
 import google.generativeai as genai
 import os
-import logging
-from dotenv import load_dotenv # .env file se variables load karne ke liye
 
-# .env file se environment variables load karein
-load_dotenv()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Environment variable se Gemini API key load karein
-# Ensure your .env file in the backend folder has: GEMINI_API_KEY="YOUR_ACTUAL_GEMINI_API_KEY"
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-
-# Agar GEMINI_API_KEY environment variable set nahi hai, toh error dein
-if not gemini_api_key or gemini_api_key == "YOUR_GEMINI_API_KEY_HERE": # Check for placeholder too
-    logger.error("GEMINI_API_KEY environment variable not set or is a placeholder. Please set it correctly in your .env file.")
-    # Agar key nahi milti to app ko start hone se roken ya koi aur appropriate action len
-    raise RuntimeError("GEMINI_API_KEY is not set or is invalid. Cannot initialize AI model. Please check your .env file.")
-
-# Gemini API ko configure karein
-genai.configure(api_key=gemini_api_key)
-
-# Gemini model ko initialize karein
-model = genai.GenerativeModel('gemini-2.0-flash')
-
+# FastAPI ایپلیکیشن انسٹینس بنائیں
 app = FastAPI()
 
-# CORS (Cross-Origin Resource Sharing) middleware ko enable karein
+# CORS مڈل ویئر شامل کریں
+# یہ کسی بھی ڈومین سے آنے والی ریکویسٹس کو اجازت دے گا (محتاط رہیں پروڈکشن میں)
+# عام طور پر، آپ کو یہاں صرف اپنے فرنٹ اینڈ کا ڈومین شامل کرنا چاہیے
+origins = [
+    "https://quickletter-ai-frontend.onrender.com",  # اپنے Render فرنٹ اینڈ کا URL یہاں شامل کریں
+    "http://localhost:3000",  # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
+    "http://127.0.0.1:3000",   # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
+    # مزید اوریجنز شامل کر سکتے ہیں اگر ضرورت ہو
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://quickletter-ai-generator.web.app"],  # React app aur live app ka URL allow karein
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # تمام HTTP methods کی اجازت دیں (GET, POST, etc.)
+    allow_headers=["*"],  # تمام headers کی اجازت دیں
 )
 
-# Request body ke liye Pydantic model (letter generation ke liye)
-class LetterRequest(BaseModel):
-    category: str
-    language: str
-    description: str
+# ان پٹ پراڈکٹ کے لیے Pydantic ماڈل
+class PromptRequest(BaseModel):
+    prompt: str
 
-# Email generation ke liye Request body ka Pydantic model
-class EmailRequest(BaseModel):
-    category: str
-    language: str
-    description: str
+# Gemini API کو انیشلائز کریں (API_KEY انوائرمنٹ ویری ایبل سے لے گا)
+# یقینی بنائیں کہ آپ نے Render پر GOOGLE_API_KEY کا Environment Variable سیٹ کیا ہے
+genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 
-# Sample description generation ke liye Request body ka Pydantic model
-class SampleDescriptionRequest(BaseModel):
-    category: str
-    language: str
+# جنریشن کانفیگریشن
+generation_config = {
+    "candidate_count": 1,
+    "max_output_tokens": 1024,
+    "temperature": 0.7,
+    "top_p": 1,
+    "top_k": 1,
+}
 
-# Root endpoint (basic check ke liye)
+# حفاظتی سیٹنگز
+safety_settings = [
+    {"category": HarmCategory.HARM_CATEGORY_HARASSMENT, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
+    {"category": HarmCategory.HARM_CATEGORY_HATE_SPEECH, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
+    {"category": HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
+    {"category": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
+]
+
+# Gemini ماڈل کو لوڈ کریں
+model = genai.GenerativeModel(
+    model_name="gemini-2.0-flash",
+    generation_config=generation_config,
+    safety_settings=safety_settings
+)
+
 @app.get("/")
 async def read_root():
-    return {"message": "FastAPI backend is running! AI Letter Generator."}
+    return {"message": "Welcome to QuickLetter AI Backend!"}
 
-# Letter generation endpoint
-@app.post("/generate_letter/")
-async def generate_letter(request: LetterRequest):
-    prompt = f"""
-    You are an AI assistant specialized in writing professional and effective letters.
-    Generate a {request.category} in {request.language} based on the following description.
-    Ensure the letter is well-structured, polite, and to the point, adopting a formal tone unless specified.
-
-    Description: {request.description}
-
-    Output only the letter content. Do not include any conversational text or formatting outside the letter itself.
-    """
-    
+@app.post("/generate-text")
+async def generate_text_api(request: PromptRequest):
     try:
-        response = model.generate_content(prompt)
-        letter_content = response.text
-        logger.info(f"Generated letter for category: {request.category}")
-        return {"letter_content": letter_content}
+        # Gemini API کو کال کریں
+        response = model.generate_content(request.prompt)
+
+        # جواب کو پروسیس کریں
+        if response.candidates:
+            return {"candidates": [candidate.to_dict() for candidate in response.candidates]}
+        else:
+            # اگر کوئی کینڈیڈیٹس نہیں ملے تو خالی جواب یا ایرر بھیجیں
+            return {"candidates": []}
+
     except Exception as e:
-        logger.error(f"Error generating letter: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate letter: {e}")
-
-# Email generation endpoint
-@app.post("/generate_email/")
-async def generate_email(request: EmailRequest):
-    prompt = f"""
-    You are an AI assistant specialized in writing professional and effective emails.
-    Generate an email for a {request.category} in {request.language} based on the following description.
-    Ensure the email is concise, professional, and follows a standard email format (Subject, Salutation, Body, Closing, Signature).
-    The tone should be appropriate for the context, typically formal unless specified otherwise in the description.
-
-    Description: {request.description}
-
-    Output only the email content, including a suitable Subject line. Do not include any conversational text or formatting outside the email itself.
-    """
-    
-    try:
-        response = model.generate_content(prompt)
-        email_content = response.text
-        logger.info(f"Generated email for category: {request.category}")
-        return {"email_content": email_content}
-    except Exception as e:
-        logger.error(f"Error generating email: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate email: {e}")
-
-# Sample description generation endpoint
-@app.post("/generate_sample_description/")
-async def generate_sample_description(request: SampleDescriptionRequest):
-    prompt = f"""
-    As an AI assistant, generate a brief and concise sample description (2-3 sentences) for a '{request.category}' in {request.language}.
-    This description will be used as a placeholder in a form to guide the user.
-    Example: 'I need a job application for a junior web developer position. I have basic knowledge of HTML, CSS, JavaScript, and React.'
-    Output only the description text.
-    """
-    try:
-        response = model.generate_content(prompt)
-        sample_description = response.text
-        logger.info(f"Generated sample description for category: {request.category}")
-        return {"sample_description": sample_description}
-    except Exception as e:
-        logger.error(f"Error generating sample description: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate sample description: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
