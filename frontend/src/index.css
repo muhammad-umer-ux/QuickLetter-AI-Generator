@@ -1,0 +1,19 @@
+/* QuickLetter_Project/frontend/src/index.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* یہاں آپ بعد میں اپنی کسٹم سٹائلز شامل کر سکتے ہیں۔ */
+/* ہم Inter font کو استعمال کر رہے ہیں جو Tailwind کے ساتھ اچھی لگتی ہے۔ */
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
