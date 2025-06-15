@@ -41,6 +41,10 @@ function App() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState('');
 
+  // Define the base URL for your FastAPI backend
+  // !!! YAHAN PAR LOCALHOST KE BAJAYE RENDER KA LIVE URL DALA GAYA HAI !!!
+  const BASE_API_URL = 'https://quickletter-ai-backend.onrender.com';
+
 
   // --- Firebase Initialization and Authentication ---
   useEffect(() => {
@@ -186,7 +190,7 @@ function App() {
       return;
     }
     if (!description.trim()) {
-      setError('Please provide a description for your document.');
+      setError('Please provide a detailed description for your document.');
       return;
     }
 
@@ -199,7 +203,8 @@ function App() {
       // Endpoint ka path documentType (letter/email) ke hisab se set karein
       const endpoint = documentType === 'letter' ? '/generate_letter/' : '/generate_email/';
       
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
+      // !!! YAHAN PAR BASE_API_URL USE KIYA GAYA HAI !!!
+      const response = await fetch(`${BASE_API_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -332,7 +337,8 @@ function App() {
         setDescription('');
 
         try {
-          const response = await fetch('http://localhost:8000/generate_sample_description/', {
+          // !!! YAHAN PAR BASE_API_URL USE KIYA GAYA HAI !!!
+          const response = await fetch(`${BASE_API_URL}/generate_sample_description/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
