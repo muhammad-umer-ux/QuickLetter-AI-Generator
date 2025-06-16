@@ -28,18 +28,19 @@ function App() {
   const [db, setDb] = useState(null);
   const [auth, setAuth] = useState(null); 
   const [userId, setUserId] = useState(null); 
-  const [appId, setAppId] = useState(null); // __app_id से वैल्यू आएगी, हार्डकोड नहीं करेंगे 
+  const [appId, setAppId] = useState(null); // __app_id سے ویلیو آئے گی، ہارڈ کوڈ نہیں کریں گے 
 
   const [letterHistory, setLetterHistory] = useState([]); 
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState('');
 
   // Define the base URL for your FastAPI backend
-  const BASE_API_URL = 'https://quickletter-ai-backend.onrender.com';
+  // !!! اب یہ Render Environment Variable (REACT_APP_API_BASE_URL) کو استعمال کرے گا !!!
+  const BASE_API_URL = process.env.REACT_APP_API_BASE_URL;
 
   // --- Firebase Initialization and Authentication ---
   useEffect(() => {
-    // __app_id और __firebase_config को ग्लोबल वेरिएबल्स से प्राप्त करें
+    // __app_id اور __firebase_config کو گلوبل ویری ایبلز سے حاصل کریں
     const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
     setAppId(currentAppId);
 
@@ -50,7 +51,7 @@ function App() {
         firebaseConfig = JSON.parse(firebaseConfigString);
       } catch (e) {
         console.error("Error parsing __firebase_config:", e);
-        setError("Firebase config parsing failed. Please try again later.");
+        setError("فائر بیس کنفیگ لوڈ کرنے میں ناکامی۔ براہ کرم بعد میں دوبارہ کوشش کریں۔");
         setLoading(false);
         return;
       }
@@ -58,7 +59,7 @@ function App() {
 
     if (!firebaseConfig || !firebaseConfig.projectId || !firebaseConfig.apiKey) { 
       console.error("Firebase config is missing essential details (projectId or apiKey). Cannot initialize Firebase.");
-      setError("Firebase setup error: Configuration missing or invalid.");
+      setError("فائر بیس سیٹ اپ ایرر: کنفیگریشن نامکمل یا غلط ہے۔");
       setLoading(false);
       return; 
     }
@@ -73,50 +74,50 @@ function App() {
       
       const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-      // Auth state changes को सुनें
+      // Auth state changes کو سنیں
       const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
         if (user) {
-          // If user is signed in
+          // اگر یوزر سائن ان ہے
           setUserId(user.uid);
-          console.log("User signed in:", user.uid);
+          console.log("یوزر سائن ان ہو گیا:", user.uid);
         } else {
-          // If user is not signed in, sign in anonymously or with custom token
+          // اگر یوزر سائن ان نہیں ہے، تو گیسٹ کے طور پر سائن ان کریں یا کسٹم ٹوکن کے ساتھ
           try {
-            if (initialAuthToken) { // If token is provided
+            if (initialAuthToken) { // اگر ٹوکن فراہم کیا گیا ہے
               await signInWithCustomToken(authInstance, initialAuthToken);
-              console.log("Signed in with custom token.");
-            } else { // Fallback to anonymous if no token or token fails
+              console.log("کسٹم ٹوکن کے ساتھ سائن ان ہو گیا ہوں۔");
+            } else { // اگر ٹوکن نہیں یا ناکام ہو تو گمنام طور پر سائن ان کریں
               await signInAnonymously(authInstance);
-              console.log("Signed in anonymously.");
+              console.log("گمنام طور پر سائن ان ہو گیا ہوں۔");
             }
           } catch (authError) {
-            console.error("Firebase Auth Error during sign-in:", authError);
-            setError(`Authentication failed: ${authError.message}. Data may not be saved.`);
-            // Fallback to a random UUID if even anonymous sign-in fails, for temporary session
+            console.error("فائر بیس Auth ایرر سائن ان کے دوران:", authError);
+            setError(`تصدیق میں ناکامی: ${authError.message}۔ ڈیٹا شاید محفوظ نہ ہو۔`);
+            // اگر گمنام سائن ان بھی ناکام ہو تو عارضی سیشن کے لیے ایک بے ترتیب UUID استعمال کریں
             setUserId(crypto.randomUUID()); 
           }
         }
-        setLoading(false); // Auth loading complete
+        setLoading(false); // Auth لوڈنگ مکمل
       });
 
-      return () => unsubscribe(); // Cleanup function
+      return () => unsubscribe(); // کلین اپ فنکشن
     } catch (firebaseInitError) {
-      console.error("Firebase initialization failed:", firebaseInitError);
-      setError("Firebase setup error: " + firebaseInitError.message);
+      console.error("فائر بیس شروع کرنے میں ناکامی:", firebaseInitError);
+      setError("فائر بیس سیٹ اپ ایرر: " + firebaseInitError.message);
       setLoading(false);
     }
   }, []); 
 
-  // useEffect to read document history from Firestore
+  // Firestore سے دستاویز کی تاریخ پڑھنے کے لیے useEffect Hook
   useEffect(() => {
-    // `db`, `userId`, और `appId` तीनों उपलब्ध होने पर ही listener सेट करें
+    // `db`، `userId`، اور `appId` تینوں دستیاب ہونے پر ہی listener سیٹ کریں
     if (db && userId && appId) { 
       setHistoryLoading(true);
       setHistoryError('');
       let unsubscribe;
 
       try {
-        // Firestore security rules के अनुसार private collection path
+        // Firestore سیکیورٹی رولز کے مطابق پرائیویٹ کلیکشن پاتھ
         const userDocumentsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/documents`);
         const q = query(userDocumentsCollectionRef, orderBy('timestamp', 'desc'));
 
@@ -130,33 +131,33 @@ function App() {
           });
           setLetterHistory(documents);
           setHistoryLoading(false);
-          console.log("Document history updated:", documents.length, "documents loaded.");
+          console.log("دستاویز کی تاریخ اپ ڈیٹ ہو گئی:", documents.length, "دستاویزات لوڈ ہوئیں۔");
         }, (err) => {
-          console.error("Error fetching document history:", err);
-          setHistoryError("Failed to load document history: " + err.message);
+          console.error("دستاویز کی تاریخ حاصل کرنے میں ایرر:", err);
+          setHistoryError("دستاویز کی تاریخ لوڈ کرنے میں ناکامی: " + err.message);
           setHistoryLoading(false);
         });
 
       } catch (err) {
-        console.error("Error setting up history listener:", err);
-        setHistoryError("Failed to set up history listener: " + err.message);
+        console.error("ہسٹری listener سیٹ اپ کرنے میں ایرر:", err);
+        setHistoryError("ہسٹری listener سیٹ اپ کرنے میں ناکامی: " + err.message);
         setHistoryLoading(false);
       }
 
       return () => {
         if (unsubscribe) {
           unsubscribe();
-          console.log("Firestore history listener unsubscribed.");
+          console.log("فائر سٹور ہسٹری listener ان سبسکرائب ہو گیا۔");
         }
       };
-    } else if (!userId && !loading) { // अगर यूजर ID नहीं है और ऐप अभी लोड नहीं हो रही
-      setHistoryError("साइन इन करें ताकि आप अपने डॉक्यूमेंट्स की हिस्ट्री देख सकें।");
+    } else if (!userId && !loading) { // اگر یوزر ID نہیں ہے اور ایپ ابھی لوڈ نہیں ہو رہی
+      setHistoryError("سائن ان کریں تاکہ آپ اپنے دستاویزات کی ہسٹری دیکھ سکیں۔");
       setHistoryLoading(false);
       setLetterHistory([]); 
     }
-  }, [db, userId, appId, loading]); // `loading` को भी dependency में शामिल किया ताकि Auth state ready होने पर history लोड हो
+  }, [db, userId, appId, loading]); // `loading` کو بھی dependency میں شامل کیا تاکہ Auth state تیار ہونے پر ہسٹری لوڈ ہو
 
-  // API से डॉक्यूमेंट जनरेट करने का फंक्शन
+  // API سے دستاویز جنریٹ کرنے کا فنکشن
   const generateDocument = async () => {
     // Input Validation
     if (!category) {
@@ -178,16 +179,16 @@ function App() {
     setCopySuccess('');
 
     try {
-      // Backend में सिर्फ एक API endpoint है: /generate-text
-      // इसलिए हम category, language, और description को एक ही prompt स्ट्रिंग में कम्बाइन करेंगे
+      // Backend میں صرف ایک API endpoint ہے: /generate-text
+      // اس لیے ہم category, language, اور description کو ایک ہی prompt سٹرنگ میں کम्बाइन کریں گے
       const promptText = `مجھے ایک ${language} میں ${documentType === 'letter' ? 'خط' : 'ای میل'} درکار ہے۔ اس کی کیٹیگری "${category}" ہے۔ تفصیل یہ ہے: "${description}"۔`;
       
-      const response = await fetch(`${BASE_API_URL}/generate-text`, { // सही API endpoint
+      const response = await fetch(`${BASE_API_URL}/generate-text`, { // صحیح API endpoint
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: promptText }), // promptText को JSON में भेजें
+        body: JSON.stringify({ prompt: promptText }), // promptText کو JSON میں بھیجیں
       });
 
       if (!response.ok) {
@@ -204,7 +205,7 @@ function App() {
                             
       setGeneratedContent(generatedText);
 
-      // Document को Firestore में सेव करें
+      // Document کو Firestore میں سیو کریں
       if (db && userId && appId) { 
         try {
           const userDocumentsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/documents`); 
@@ -214,26 +215,26 @@ function App() {
             language: language,
             description: description,
             content: generatedText,
-            timestamp: serverTimestamp(), // serverTimestamp() का उपयोग करें
+            timestamp: serverTimestamp(), // serverTimestamp() کا استعمال کریں
           });
-          console.log("Document saved to Firestore successfully!");
+          console.log("دستاویز فائر سٹور میں کامیابی سے محفوظ ہو گیا!");
         } catch (firestoreError) {
-          console.error("Error saving document to Firestore:", firestoreError);
+          console.error("دستاویز فائر سٹور میں محفوظ کرنے میں ایرر:", firestoreError);
           setError(prev => prev ? prev + " اور دستاویز محفوظ کرنے میں ناکامی۔" : "دستاویز محفوظ کرنے میں ناکامی۔");
         }
       } else {
-        console.warn("Firestore तैयार नहीं या userId دستیاب نہیں ہے۔ ہسٹری میں محفوظ کرنا چھوڑ دیا گیا۔");
+        console.warn("فائر سٹور تیار نہیں یا یوزر ID دستیاب نہیں ہے۔ ہسٹری میں محفوظ کرنا چھوڑ دیا گیا۔");
       }
 
     } catch (err) {
-      console.error('दस्तावेज जनरेट करने में त्रुटि:', err);
-      setError('त्रुटि: ' + err.message + '। कृपया दुबारा कोशिश करें।');
+      console.error('دستاویز جنریٹ کرنے میں ایرر:', err);
+      setError('ایر ر: ' + err.message + '۔ براہ کرم دوبارہ کوشش کریں۔');
     } finally {
       setLoading(false);
     }
   };
 
-  // sample description जनरेट करने का फंक्शन (इसे /generate-text पर मैप करेंगे)
+  // مثال تفصیل جنریٹ کرنے کا فنکشن (اسے /generate-text پر میپ کریں گے)
   useEffect(() => {
     const fetchSampleDescription = async () => {
       if (category && language) {
@@ -242,10 +243,10 @@ function App() {
         setDescription('');
 
         try {
-          // sample description के लिए भी /generate-text का उपयोग करें
+          // مثال تفصیل کے لیے بھی /generate-text کا استعمال کریں
           const promptText = `مجھے "${category}" کیٹیگری کے لیے ${language} میں ایک مختصر، 2-3 سطروں کی مثال تفصیل درکار ہے تاکہ یوزر کو معلوم ہو کہ وہ کیا تفصیل درج کریں۔`;
           
-          const response = await fetch(`${BASE_API_URL}/generate-text`, { // सही API endpoint
+          const response = await fetch(`${BASE_API_URL}/generate-text`, { // صحیح API endpoint
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -267,8 +268,8 @@ function App() {
 
           setDescription(sampleDescription);
         } catch (err) {
-          console.error('उदाहरण विवरण जनरेट करने में त्रुटि:', err);
-          setSampleDescError('उदाहरण विवरण लोड नहीं हो सका: ' + err.message);
+          console.error('مثال تفصیل جنریٹ کرنے میں ایرر:', err);
+          setSampleDescError('مثال تفصیل لوڈ نہیں ہو سکی: ' + err.message);
         } finally {
           setSampleDescLoading(false);
         }
@@ -279,26 +280,26 @@ function App() {
     };
 
     fetchSampleDescription();
-  }, [category, language, BASE_API_URL]); // BASE_API_URL को भी dependency में शामिल करें
+  }, [category, language, BASE_API_URL]); // BASE_API_URL کو بھی dependency میں شامل کریں
 
-  // Function to delete a document from Firestore
+  // Firestore سے دستاویز کو حذف کرنے کا فنکشن
   const deleteDocument = async (documentId) => {
     if (!db || !userId || !appId) {
-      setError("दस्तावेज हटाया नहीं जा सकता: डेटाबेस तैयार नहीं या उपयोगकर्ता प्रमाणीकृत नहीं।");
-      console.error("Delete failed: db, userId or appId not available.");
+      setError("دستاویز ہٹایا نہیں جا سکتا: ڈیٹا بیس تیار نہیں یا صارف کی تصدیق نہیں ہوئی۔");
+      console.error("حذف کرنے میں ناکامی: db، userId یا appId دستیاب نہیں۔");
       return;
     }
 
     setError(''); 
-    console.log(`Attempting to delete document with ID: ${documentId} for user: ${userId}`);
+    console.log(`دستاویز ID کے ساتھ حذف کرنے کی کوشش: ${documentId} یوزر کے لیے: ${userId}`);
 
     try {
       const documentDocRef = doc(db, `artifacts/${appId}/users/${userId}/documents`, documentId);
       await deleteDoc(documentDocRef);
-      console.log("Document deleted successfully from Firestore!");
+      console.log("دستاویز فائر سٹور سے کامیابی سے حذف ہو گیا!");
     } catch (err) {
-      console.error("Error deleting document from Firestore:", err);
-      setError("दस्तावेज हटाने में विफल: " + err.message);
+      console.error("دستاویز فائر سٹور سے حذف کرنے میں ایرر:", err);
+      setError("دستاویز حذف کرنے میں ناکامی: " + err.message);
     }
   };
 
@@ -377,6 +378,12 @@ function App() {
         {userId && (
           <div className="user-id-display">
             <p>آپ کا یوزر ID: <strong>{userId}</strong></p>
+          </div>
+        )}
+
+        {error && (
+          <div className="error-message">
+            <p>{error}</p>
           </div>
         )}
 
@@ -506,12 +513,6 @@ function App() {
           <div className="loading-message">
             <CircleDashed size={24} className="loading-icon" />
             <p>آپ کا {documentType} جنریٹ ہو رہا ہے، براہ کرم انتظار کریں...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="error-message">
-            <p>{error}</p>
           </div>
         )}
 
