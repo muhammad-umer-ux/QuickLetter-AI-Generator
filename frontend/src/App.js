@@ -35,8 +35,9 @@ function App() {
   const [historyError, setHistoryError] = useState('');
 
   // Define the base URL for your FastAPI backend
-  // !!! اب یہ Render Environment Variable (REACT_APP_API_BASE_URL) کو استعمال کرے گا !!!
-  const BASE_API_URL = process.env.REACT_APP_API_BASE_URL;
+  // !!! یہاں BASE_API_URL کو براہ راست آپ کے Render بیک اینڈ کے لائیو URL پر سیٹ کیا گیا ہے !!!
+  // تاکہ process.env.REACT_APP_API_BASE_URL کے ساتھ مسائل حل ہو سکیں
+  const BASE_API_URL = 'https://quickletter-ai-backend.onrender.com';
 
   // --- Firebase Initialization and Authentication ---
   useEffect(() => {
@@ -180,7 +181,7 @@ function App() {
 
     try {
       // Backend میں صرف ایک API endpoint ہے: /generate-text
-      // اس لیے ہم category, language, اور description کو ایک ہی prompt سٹرنگ میں کम्बाइन کریں گے
+      // اس لیے ہم category, language, اور description کو ایک ہی prompt سٹرنگ میں کम्बائن کریں گے
       const promptText = `مجھے ایک ${language} میں ${documentType === 'letter' ? 'خط' : 'ای میل'} درکار ہے۔ اس کی کیٹیگری "${category}" ہے۔ تفصیل یہ ہے: "${description}"۔`;
       
       const response = await fetch(`${BASE_API_URL}/generate-text`, { // صحیح API endpoint
