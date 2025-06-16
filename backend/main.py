@@ -14,7 +14,7 @@ app = FastAPI()
 # عام طور پر، آپ کو یہاں صرف اپنے فرنٹ اینڈ کا ڈومین شامل کرنا چاہیے
 origins = [
     "https://quickletter-ai-frontend.onrender.com",    # آپ کے Render فرنٹ اینڈ کا URL
-    "https://quickletter-ai-generator.web.app",        # !!! یہ نئی لائن شامل کی گئی ہے - Firebase Hosting URL !!!
+    "https://quickletter-ai-generator.web.app",        # یہ Firebase Hosting URL ہے
     "http://localhost:3000",                           # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
     "http://127.0.0.1:3000",                           # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
     # مزید اوریجنز شامل کر سکتے ہیں اگر ضرورت ہو
@@ -64,6 +64,7 @@ model = genai.GenerativeModel(
 async def read_root():
     return {"message": "Welcome to QuickLetter AI Backend!"}
 
+# !!! یہاں پر (@app.post("/generate-text")) کلوزنگ قوسین شامل کیا گیا ہے !!!
 @app.post("/generate-text")
 async def generate_text_api(request: PromptRequest):
     try:
@@ -71,11 +72,27 @@ async def generate_text_api(request: PromptRequest):
         response = model.generate_content(request.prompt)
 
         # جواب کو پروسیس کریں
-        if response.candidates:
-            return {"candidates": [candidate.to_dict() for candidate in response.candidates]}
+        # !!! یہاں پر Gemini API کے جواب کو صحیح طریقے سے پروسیس کرنے کے لیے کوڈ تبدیل کیا گیا ہے !!!
+        # یہ `to_dict()` ایرر کو حل کرے گا اور فرنٹ اینڈ کی توقع کے مطابق فارمیٹ بھیجے گا۔
+        if response.candidates and len(response.candidates) > 0 and \
+           hasattr(response.candidates[0], 'content') and \
+           hasattr(response.candidates[0].content, 'parts') and \
+           len(response.candidates[0].content.parts) > 0:
+            
+            generated_text = response.candidates[0].content.parts[0].text
+            return {
+                "candidates": [{
+                    "content": {
+                        "parts": [
+                            {"text": generated_text}
+                        ]
+                    }
+                }]
+            }
         else:
-            # اگر کوئی کینڈیڈیٹس نہیں ملے تو خالی جواب یا ایرر بھیجیں
+            # اگر کوئی کینڈیڈیٹس یا مواد نہیں ملا تو خالی جواب بھیجیں
             return {"candidates": []}
 
     except Exception as e:
+        # ایرر کو HTTPException میں تبدیل کریں تاکہ فرنٹ اینڈ پر واضح پیغام ملے
         raise HTTPException(status_code=500, detail=str(e))
