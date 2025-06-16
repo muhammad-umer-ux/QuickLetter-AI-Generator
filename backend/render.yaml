@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: quickletter-backend
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host=0.0.0.0 --port=$PORT"
+    envVars:
+      # GOOGLE_API_KEY یہاں value کے ساتھ شامل نہیں کیا گیا کیونکہ یہ Render کے Environment Variables میں پہلے سے موجود ہے
+      # Render خود بخود Environment Variables کو ترجیح دیتا ہے
+      - key: GOOGLE_API_KEY
