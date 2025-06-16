@@ -13,9 +13,10 @@ app = FastAPI()
 # یہ کسی بھی ڈومین سے آنے والی ریکویسٹس کو اجازت دے گا (محتاط رہیں پروڈکشن میں)
 # عام طور پر، آپ کو یہاں صرف اپنے فرنٹ اینڈ کا ڈومین شامل کرنا چاہیے
 origins = [
-    "https://quickletter-ai-frontend.onrender.com",  # اپنے Render فرنٹ اینڈ کا URL یہاں شامل کریں
-    "http://localhost:3000",  # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
-    "http://127.0.0.1:3000",   # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
+    "https://quickletter-ai-frontend.onrender.com",    # آپ کے Render فرنٹ اینڈ کا URL
+    "https://quickletter-ai-generator.web.app",        # !!! یہ نئی لائن شامل کی گئی ہے - Firebase Hosting URL !!!
+    "http://localhost:3000",                           # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
+    "http://127.0.0.1:3000",                           # اگر آپ لوکل پر ٹیسٹ کر رہے ہیں
     # مزید اوریجنز شامل کر سکتے ہیں اگر ضرورت ہو
 ]
 
@@ -23,8 +24,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # تمام HTTP methods کی اجازت دیں (GET, POST, etc.)
-    allow_headers=["*"],  # تمام headers کی اجازت دیں
+    allow_methods=["*"],    # تمام HTTP methods کی اجازت دیں (GET, POST, etc.)
+    allow_headers=["*"],    # تمام headers کی اجازت دیں
 )
 
 # ان پٹ پراڈکٹ کے لیے Pydantic ماڈل
